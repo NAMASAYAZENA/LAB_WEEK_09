@@ -8,7 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -18,23 +19,20 @@ import androidx.compose.ui.unit.dp
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 
 // =======================================================
-// Part 1 – Building a Simple Jetpack Compose UI
+// MODUL 9 – PART 2
+// States and Adding Event Handlers
 // =======================================================
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Compose menggunakan setContent, bukan setContentView
         setContent {
             LAB_WEEK_09Theme {
-                // Surface = container utama
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // data statis untuk Part 1
-                    val list = listOf("Tanu", "Tina", "Tono")
-                    Home(list)
+                    Home()
                 }
             }
         }
@@ -42,13 +40,55 @@ class MainActivity : ComponentActivity() {
 }
 
 // =======================================================
-// Composable Function – Home
+// Data Model
+// =======================================================
+data class Student(
+    var name: String
+)
+
+// =======================================================
+// Composable Function – Home (pakai State)
 // =======================================================
 @Composable
-fun Home(items: List<String>) {
-    // LazyColumn = pengganti RecyclerView
+fun Home() {
+    // Membuat list mahasiswa dengan state (agar bisa berubah)
+    val listData = remember {
+        mutableStateListOf(
+            Student("Tanu"),
+            Student("Tina"),
+            Student("Tono")
+        )
+    }
+
+    // State untuk input text
+    var inputField = remember { mutableStateOf(Student("")) }
+
+    // Panggil HomeContent untuk menampilkan isi halaman
+    HomeContent(
+        listData,
+        inputField.value,
+        { input -> inputField.value = Student(input) },
+        {
+            if (inputField.value.name.isNotBlank()) {
+                listData.add(inputField.value)
+                inputField.value = Student("")
+            }
+        }
+    )
+}
+
+// =======================================================
+// Composable Function – HomeContent
+// =======================================================
+@Composable
+fun HomeContent(
+    listData: SnapshotStateList<Student>,
+    inputField: Student,
+    onInputValueChange: (String) -> Unit,
+    onButtonClick: () -> Unit
+) {
     LazyColumn {
-        // item pertama berisi input dan tombol
+        // Bagian input dan tombol
         item {
             Column(
                 modifier = Modifier
@@ -56,38 +96,31 @@ fun Home(items: List<String>) {
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // judul daftar
-                Text(text = stringResource(id = R.string.list_title))
+                Text(text = stringResource(id = R.string.enter_item))
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // TextField (belum berfungsi di Part 1)
                 TextField(
-                    value = "",
-                    onValueChange = {},
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text
-                    )
+                    value = inputField.name,
+                    onValueChange = { onInputValueChange(it) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Tombol Submit (belum berfungsi di Part 1)
-                Button(onClick = { }) {
+                Button(onClick = { onButtonClick() }) {
                     Text(text = stringResource(id = R.string.button_click))
                 }
             }
         }
 
-        // item berikutnya = daftar nama statis
-        items(items) { item ->
+        // Menampilkan list mahasiswa
+        items(listData) { item ->
             Column(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = item)
+                Text(text = item.name)
             }
         }
     }
@@ -100,6 +133,17 @@ fun Home(items: List<String>) {
 @Composable
 fun PreviewHome() {
     LAB_WEEK_09Theme {
-        Home(listOf("Tanu", "Tina", "Tono"))
+        // preview dengan data dummy
+        val listData = mutableStateListOf(
+            Student("Tanu"),
+            Student("Tina"),
+            Student("Tono")
+        )
+        HomeContent(
+            listData = listData,
+            inputField = Student(""),
+            onInputValueChange = {},
+            onButtonClick = {}
+        )
     }
 }
