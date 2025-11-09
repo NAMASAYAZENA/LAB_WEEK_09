@@ -16,11 +16,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
+import com.example.lab_week_09.ui.theme.*
 
 // =======================================================
-// MODUL 9 – PART 2
-// States and Adding Event Handlers
+// MODUL 9 – PART 3
+// UI Elements and Theming
 // =======================================================
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +51,6 @@ data class Student(
 // =======================================================
 @Composable
 fun Home() {
-    // Membuat list mahasiswa dengan state (agar bisa berubah)
     val listData = remember {
         mutableStateListOf(
             Student("Tanu"),
@@ -60,10 +59,8 @@ fun Home() {
         )
     }
 
-    // State untuk input text
     var inputField = remember { mutableStateOf(Student("")) }
 
-    // Panggil HomeContent untuk menampilkan isi halaman
     HomeContent(
         listData,
         inputField.value,
@@ -78,7 +75,7 @@ fun Home() {
 }
 
 // =======================================================
-// Composable Function – HomeContent
+// Composable Function – HomeContent (pakai elemen custom)
 // =======================================================
 @Composable
 fun HomeContent(
@@ -88,7 +85,6 @@ fun HomeContent(
     onButtonClick: () -> Unit
 ) {
     LazyColumn {
-        // Bagian input dan tombol
         item {
             Column(
                 modifier = Modifier
@@ -96,7 +92,12 @@ fun HomeContent(
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(id = R.string.enter_item))
+                // 🔹 Title custom
+                OnBackgroundTitleText(
+                    text = stringResource(id = R.string.enter_item)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 TextField(
                     value = inputField.name,
@@ -106,13 +107,16 @@ fun HomeContent(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = { onButtonClick() }) {
-                    Text(text = stringResource(id = R.string.button_click))
+                // 🔹 Tombol custom
+                PrimaryTextButton(
+                    text = stringResource(id = R.string.button_click)
+                ) {
+                    onButtonClick()
                 }
             }
         }
 
-        // Menampilkan list mahasiswa
+        // 🔹 Daftar nama
         items(listData) { item ->
             Column(
                 modifier = Modifier
@@ -120,30 +124,27 @@ fun HomeContent(
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = item.name)
+                OnBackgroundItemText(text = item.name)
             }
         }
     }
 }
 
 // =======================================================
-// Preview untuk Android Studio
+// Preview
 // =======================================================
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun PreviewHome() {
-    LAB_WEEK_09Theme {
-        // preview dengan data dummy
-        val listData = mutableStateListOf(
-            Student("Tanu"),
-            Student("Tina"),
-            Student("Tono")
-        )
-        HomeContent(
-            listData = listData,
-            inputField = Student(""),
-            onInputValueChange = {},
-            onButtonClick = {}
-        )
+fun PreviewLight() {
+    LAB_WEEK_09Theme(darkTheme = false) {
+        Home()
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode")
+@Composable
+fun PreviewDark() {
+    LAB_WEEK_09Theme(darkTheme = true) {
+        Home()
     }
 }
