@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -18,10 +17,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.lab_week_09.ui.theme.*
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.launch
+import java.net.URLEncoder
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 // =======================================================
-// MODUL 9 – PART 4
-// Navigation
+// MODUL 9
 // =======================================================
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
 data class Student(var name: String)
 
 // =======================================================
-// HomeScreen – Input data dan navigasi ke Summary
+// HomeScreen – convert list to JSON using Moshi
 // =======================================================
 @Composable
 fun HomeScreen(navController: androidx.navigation.NavHostController) {
@@ -59,33 +63,62 @@ fun HomeScreen(navController: androidx.navigation.NavHostController) {
         )
     }
 
-    var inputField = remember { mutableStateOf(Student("")) }
+    var inputField by remember { mutableStateOf(Student("")) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-    HomeContent(
-        listData,
-        inputField.value,
-        { input -> inputField.value = Student(input) },
-        {
-            if (inputField.value.name.isNotBlank()) {
-                listData.add(inputField.value)
-                inputField.value = Student("")
-            }
-        },
-        onFinishClick = {
-            // Navigasi ke Summary sambil kirim data (disimpan global dulu)
-            GlobalStudentData.students = listData
-            navController.navigate("summary")
-        }
-    )
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        HomeContent(
+            listData = listData,
+            inputField = inputField,
+            onInputValueChange = { inputField = Student(it) },
+            onButtonClick = {
+                if (inputField.name.isNotBlank()) {
+                    listData.add(inputField)
+                    inputField = Student("")
+                } else {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Please enter a name first!")
+                    }
+                }
+            },
+            onFinishClick = {
+                // 🔹 Konversi list ke JSON pakai Moshi
+                val moshi = Moshi.Builder()
+                    .add(KotlinJsonAdapterFactory())
+                    .build()
+                val adapter = moshi.adapter(List::class.java)
+                val jsonString = adapter.toJson(listData)
+
+                // 🔹 Encode JSON agar aman di URL
+                val encodedJson = URLEncoder.encode(jsonString, StandardCharsets.UTF_8.toString())
+
+                // 🔹 Navigasi ke summary dengan JSON di route
+                navController.navigate("summary/$encodedJson")
+            },
+            modifier = Modifier.padding(innerPadding)
+        )
+    }
 }
 
 // =======================================================
-// SummaryScreen – Menampilkan daftar nama
+// SummaryScreen – decode JSON and display list
 // =======================================================
 @Composable
-fun SummaryScreen(navController: androidx.navigation.NavHostController) {
-    val listData = GlobalStudentData.students
+fun SummaryScreen(navController: androidx.navigation.NavHostController, jsonData: String) {
+    // 🔹 Decode JSON dari URL
+    val decodedJson = URLDecoder.decode(jsonData, StandardCharsets.UTF_8.toString())
 
+    // 🔹 Parse JSON ke List<Student> pakai Moshi
+    val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+    val adapter = moshi.adapter<List<Map<String, String>>>(List::class.java)
+    val studentList = adapter.fromJson(decodedJson)?.map { Student(it["name"] ?: "") } ?: emptyList()
+
+    // 🔹 Tampilkan data hasil parsing
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -93,10 +126,11 @@ fun SummaryScreen(navController: androidx.navigation.NavHostController) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         OnBackgroundTitleText(text = stringResource(id = R.string.list_title))
+
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn {
-            items(listData) { student ->
+            items(studentList) { student ->
                 OnBackgroundItemText(text = student.name)
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -111,24 +145,18 @@ fun SummaryScreen(navController: androidx.navigation.NavHostController) {
 }
 
 // =======================================================
-// Object untuk menyimpan data global sementara
-// =======================================================
-object GlobalStudentData {
-    var students: SnapshotStateList<Student> = mutableStateListOf()
-}
-
-// =======================================================
-// HomeContent – pakai tombol Finish untuk navigasi
+// HomeContent (UI reuse from previous parts)
 // =======================================================
 @Composable
 fun HomeContent(
-    listData: SnapshotStateList<Student>,
+    listData: List<Student>,
     inputField: Student,
     onInputValueChange: (String) -> Unit,
     onButtonClick: () -> Unit,
-    onFinishClick: () -> Unit
+    onFinishClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    LazyColumn {
+    LazyColumn(modifier = modifier.fillMaxSize()) {
         item {
             Column(
                 modifier = Modifier

@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 
 // =======================================================
 // Navigation Graph
@@ -17,8 +19,12 @@ fun NavigationGraph(navController: NavHostController) {
         composable("home") {
             HomeScreen(navController)
         }
-        composable("summary") {
-            SummaryScreen(navController)
+        composable(
+            route = "summary/{jsonData}",
+            arguments = listOf(navArgument("jsonData") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val jsonData = backStackEntry.arguments?.getString("jsonData") ?: "[]"
+            SummaryScreen(navController, jsonData)
         }
     }
 }
