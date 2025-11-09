@@ -16,11 +16,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
 import com.example.lab_week_09.ui.theme.*
 
 // =======================================================
-// MODUL 9 – PART 3
-// UI Elements and Theming
+// MODUL 9 – PART 4
+// Navigation
 // =======================================================
 
 class MainActivity : ComponentActivity() {
@@ -32,7 +33,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Home()
+                    val navController = rememberNavController()
+                    NavigationGraph(navController)
                 }
             }
         }
@@ -42,15 +44,13 @@ class MainActivity : ComponentActivity() {
 // =======================================================
 // Data Model
 // =======================================================
-data class Student(
-    var name: String
-)
+data class Student(var name: String)
 
 // =======================================================
-// Composable Function – Home (pakai State)
+// HomeScreen – Input data dan navigasi ke Summary
 // =======================================================
 @Composable
-fun Home() {
+fun HomeScreen(navController: androidx.navigation.NavHostController) {
     val listData = remember {
         mutableStateListOf(
             Student("Tanu"),
@@ -70,19 +70,63 @@ fun Home() {
                 listData.add(inputField.value)
                 inputField.value = Student("")
             }
+        },
+        onFinishClick = {
+            // Navigasi ke Summary sambil kirim data (disimpan global dulu)
+            GlobalStudentData.students = listData
+            navController.navigate("summary")
         }
     )
 }
 
 // =======================================================
-// Composable Function – HomeContent (pakai elemen custom)
+// SummaryScreen – Menampilkan daftar nama
+// =======================================================
+@Composable
+fun SummaryScreen(navController: androidx.navigation.NavHostController) {
+    val listData = GlobalStudentData.students
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        OnBackgroundTitleText(text = stringResource(id = R.string.list_title))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyColumn {
+            items(listData) { student ->
+                OnBackgroundItemText(text = student.name)
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        PrimaryTextButton(text = "Back") {
+            navController.popBackStack()
+        }
+    }
+}
+
+// =======================================================
+// Object untuk menyimpan data global sementara
+// =======================================================
+object GlobalStudentData {
+    var students: SnapshotStateList<Student> = mutableStateListOf()
+}
+
+// =======================================================
+// HomeContent – pakai tombol Finish untuk navigasi
 // =======================================================
 @Composable
 fun HomeContent(
     listData: SnapshotStateList<Student>,
     inputField: Student,
     onInputValueChange: (String) -> Unit,
-    onButtonClick: () -> Unit
+    onButtonClick: () -> Unit,
+    onFinishClick: () -> Unit
 ) {
     LazyColumn {
         item {
@@ -92,10 +136,7 @@ fun HomeContent(
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 🔹 Title custom
-                OnBackgroundTitleText(
-                    text = stringResource(id = R.string.enter_item)
-                )
+                OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -107,16 +148,23 @@ fun HomeContent(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 🔹 Tombol custom
-                PrimaryTextButton(
-                    text = stringResource(id = R.string.button_click)
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    onButtonClick()
+                    PrimaryTextButton(text = stringResource(id = R.string.button_click)) {
+                        onButtonClick()
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    PrimaryTextButton(text = stringResource(id = R.string.button_navigate)) {
+                        onFinishClick()
+                    }
                 }
             }
         }
 
-        // 🔹 Daftar nama
         items(listData) { item ->
             Column(
                 modifier = Modifier
@@ -133,18 +181,11 @@ fun HomeContent(
 // =======================================================
 // Preview
 // =======================================================
-@Preview(showBackground = true, name = "Light Mode")
+@Preview(showBackground = true)
 @Composable
-fun PreviewLight() {
-    LAB_WEEK_09Theme(darkTheme = false) {
-        Home()
-    }
-}
-
-@Preview(showBackground = true, name = "Dark Mode")
-@Composable
-fun PreviewDark() {
-    LAB_WEEK_09Theme(darkTheme = true) {
-        Home()
+fun PreviewHome() {
+    LAB_WEEK_09Theme {
+        val navController = rememberNavController()
+        HomeScreen(navController)
     }
 }
